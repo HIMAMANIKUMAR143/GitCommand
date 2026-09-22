@@ -1,64 +1,68 @@
 import pg from 'pg';
 import { newDb } from 'pg-mem';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { SCHEMA_SQL } from './schema.js';
+import { seedDemoData } from './seed.js';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 let poolInstance = null;
+let initPromise = null;
 let isInMemory = false;
 
 export async function getDbPool() {
   if (poolInstance) return poolInstance;
+  if (initPromise) return initPromise;
 
-  const connectionString = process.env.DATABASE_URL;
+  initPromise = (async () => {
+    const connectionString = process.env.DATABASE_URL;
 
-  // Try real PostgreSQL first
-  if (connectionString) {
-    try {
-      const realPool = new pg.Pool({
-        connectionString,
-        connectionTimeoutMillis: 2000,
-      });
+    // Try real PostgreSQL first
+    if (connectionString) {
+      try {
+        const realPool = new pg.Pool({
+          connectionString,
+          connectionTimeoutMillis: 2000,
+        });
 
-      // Test connection
-      const client = await realPool.connect();
-      client.release();
-      console.log('✅ Connected to live PostgreSQL database');
-      poolInstance = realPool;
-      isInMemory = false;
-      await initSchema(poolInstance);
-      return poolInstance;
-    } catch (err) {
-      console.warn('⚠️  Could not connect to live PostgreSQL server:', err.message);
-      console.log('🔄 Falling back to embedded in-memory PostgreSQL engine (pg-mem)...');
+        // Test connection
+        const client = await realPool.connect();
+        client.release();
+        console.log('✅ Connected to live PostgreSQL database');
+        poolInstance = realPool;
+        isInMemory = false;
+        await initSchema(poolInstance);
+        await seedDemoData();
+        return poolInstance;
+      } catch (err) {
+        console.warn('⚠️  Could not connect to live PostgreSQL server:', err.message);
+        console.log('🔄 Falling back to embedded in-memory PostgreSQL engine (pg-mem)...');
+      }
     }
-  }
 
-  // Fallback to in-memory PostgreSQL engine
-  const memDb = newDb();
-  
-  // Register necessary Postgres functions/casts in pg-mem if needed
-  memDb.public.registerFunction({
-    name: 'current_database',
-    args: [],
-    returns: memDb.public.getType('text'),
-    implementation: () => 'git_reset_lab_mem',
-  });
+    // Fallback to in-memory PostgreSQL engine
+    const memDb = newDb();
 
-  const adapter = memDb.adapters.createPg();
-  const memPool = new adapter.Pool();
-  
-  console.log('✅ Embedded in-memory PostgreSQL database initialized successfully.');
-  poolInstance = memPool;
-  isInMemory = true;
-  await initSchema(poolInstance);
-  return poolInstance;
+    // Register necessary Postgres functions/casts in pg-mem if needed
+    memDb.public.registerFunction({
+      name: 'current_database',
+      args: [],
+      returns: memDb.public.getType('text'),
+      implementation: () => 'git_reset_lab_mem',
+    });
+
+    const adapter = memDb.adapters.createPg();
+    const memPool = new adapter.Pool();
+
+    console.log('✅ Embedded in-memory PostgreSQL database initialized successfully.');
+    poolInstance = memPool;
+    isInMemory = true;
+    await initSchema(poolInstance);
+    await seedDemoData();
+    return poolInstance;
+  })();
+
+  return initPromise;
 }
 
 export function isUsingInMemoryDb() {
@@ -66,12 +70,10 @@ export function isUsingInMemoryDb() {
 }
 
 async function initSchema(pool) {
-  const schemaPath = path.join(__dirname, 'schema.sql');
-  const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+  const schemaSql = SCHEMA_SQL;
 
-  // If in-memory, remove CREATE INDEX IF NOT EXISTS or split statements
+  // Execute schema statements
   try {
-    // Execute schema statements
     await pool.query(schemaSql);
     console.log('✅ Database schema verified / initialized.');
   } catch (err) {

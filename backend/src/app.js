@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000;
 
 // Security & Parsing Middleware
 app.use(cors({
-  origin: '*', // Allow local frontend Vite dev server
+  origin: '*', // Allow local and remote frontend clients
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -28,18 +28,32 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
+// Health check endpoint (supports both /api/health and /health)
+const healthHandler = (req, res) => {
   res.json({
     status: 'healthy',
     service: 'Git Reset Lab API',
     database_mode: isUsingInMemoryDb() ? 'in-memory-postgresql' : 'live-postgresql',
     timestamp: new Date().toISOString()
   });
-});
+};
+app.get('/api/health', healthHandler);
+app.get('/health', healthHandler);
 
-// Mount Routes
+// Root API endpoints
+const rootHandler = (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'Git Reset Lab API',
+    version: '1.0.0'
+  });
+};
+app.get('/api', rootHandler);
+app.get('/', rootHandler);
+
+// Mount Routes (supports both /api/repositories and /repositories)
 app.use('/api/repositories', repositoryRoutes);
+app.use('/repositories', repositoryRoutes);
 
 // 404 Handler
 app.use((req, res) => {
@@ -49,13 +63,14 @@ app.use((req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Startup & Bootstrap
+// Startup & Bootstrap for standalone/local server
 async function startServer() {
   try {
     await getDbPool();
     await seedDemoData();
 
-    if (process.env.NODE_ENV !== 'test') {
+    // Only listen on port if not in test and not in Vercel serverless environment
+    if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
       app.listen(PORT, () => {
         console.log(`🚀 Git Reset Lab Backend running at http://localhost:${PORT}`);
         console.log(`📦 Database Mode: ${isUsingInMemoryDb() ? 'In-Memory PostgreSQL Engine' : 'Live PostgreSQL Server'}`);
@@ -63,10 +78,15 @@ async function startServer() {
     }
   } catch (err) {
     console.error('❌ Failed to start Git Reset Lab backend:', err);
-    process.exit(1);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
   }
 }
 
-startServer();
+// In local environment, start server immediately
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 export default app;
