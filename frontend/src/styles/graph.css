@@ -1,0 +1,299 @@
+/* Commit Graph Styles */
+
+.graph-card {
+  position: relative;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.graph-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.graph-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-dot.reachable {
+  background-color: var(--git-commit-node);
+  box-shadow: 0 0 6px var(--git-commit-node);
+}
+
+.legend-dot.unreachable {
+  background-color: var(--git-commit-unreachable);
+  border: 1px dashed var(--git-commit-unreachable);
+}
+
+.legend-dot.head {
+  background-color: var(--git-head);
+  box-shadow: 0 0 8px var(--git-head-glow);
+}
+
+.graph-viewport {
+  width: 100%;
+  min-height: 240px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 36px 24px;
+  background: radial-gradient(#1c2128 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-color: #0b0f14;
+  position: relative;
+}
+
+.graph-canvas {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  min-width: max-content;
+  padding: 10px 20px;
+  position: relative;
+}
+
+/* Individual Node Container */
+.node-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+/* Commit Node Card */
+.commit-node {
+  width: 175px;
+  background-color: var(--bg-card);
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  user-select: none;
+  z-index: 2;
+}
+
+.commit-node:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-muted);
+  box-shadow: var(--shadow-md);
+}
+
+.commit-node.selected {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.3), var(--shadow-md);
+}
+
+/* Reachable vs Unreachable */
+.commit-node.reachable {
+  border-color: rgba(88, 166, 255, 0.4);
+  background: linear-gradient(180deg, #161b22 0%, #11151b 100%);
+}
+
+.commit-node.unreachable {
+  border: 1.5px dashed var(--git-commit-unreachable);
+  background-color: rgba(210, 153, 34, 0.04);
+  opacity: 0.78;
+}
+
+.commit-node.unreachable:hover {
+  opacity: 1;
+}
+
+.commit-node.is-head {
+  border-color: var(--git-head);
+  box-shadow: var(--shadow-node-head);
+}
+
+/* Node Elements */
+.node-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.node-number-badge {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-default);
+}
+
+.commit-node.is-head .node-number-badge {
+  background-color: var(--git-head);
+  color: var(--text-inverse);
+  border-color: var(--git-head);
+}
+
+.node-hash {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  background-color: var(--bg-app);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+}
+
+.node-message {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-unreachable-tag {
+  font-size: 10px;
+  color: var(--status-warning-text);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+/* Pointer Indicators */
+.head-pointer-indicator {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: headBounce 1.6s ease-in-out infinite alternate;
+  z-index: 10;
+}
+
+.head-pointer-tag {
+  background-color: var(--git-head);
+  color: #090d13;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px var(--git-head-glow);
+}
+
+.head-pointer-arrow {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--git-head);
+}
+
+/* Branch Tags under node */
+.node-branches {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.branch-pointer-tag {
+  background-color: rgba(63, 185, 80, 0.2);
+  color: var(--git-branch-main);
+  border: 1px solid rgba(63, 185, 80, 0.4);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+/* Arrow between nodes */
+.node-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 2px;
+  position: relative;
+}
+
+.connector-line {
+  width: 100%;
+  height: 2px;
+  background-color: var(--border-default);
+  position: relative;
+}
+
+.connector-line.reachable {
+  background-color: rgba(88, 166, 255, 0.5);
+}
+
+.connector-line.unreachable {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--git-commit-unreachable),
+    var(--git-commit-unreachable) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.connector-arrow {
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--border-default);
+}
+
+.connector-line.reachable .connector-arrow {
+  border-left-color: rgba(88, 166, 255, 0.7);
+}
+
+.connector-line.unreachable .connector-arrow {
+  border-left-color: var(--git-commit-unreachable);
+}
+
+@keyframes headBounce {
+  from { transform: translateX(-50%) translateY(0); }
+  to { transform: translateX(-50%) translateY(-4px); }
+}
